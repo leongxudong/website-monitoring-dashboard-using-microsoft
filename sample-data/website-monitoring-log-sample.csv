@@ -1,0 +1,7 @@
+CheckTimestamp,TargetName,TargetUrl,Environment,HttpStatusCode,IsSuccess,ResponseTimeMs,FailureCategory,Severity,AlertRequired,AlertSent,AlertChannel,AlertState,IncidentId,Notes
+2026-07-16 09:00:00,Public Website,https://www.example.org,Production,200,Yes,430,None,Informational,No,No,None,Healthy,,Successful check
+2026-07-16 09:05:00,Public Website,https://www.example.org,Production,0,No,,Timeout,Low,No,No,None,Warning,INC-20260716-001,First failed check; alert suppressed
+2026-07-16 09:10:00,Public Website,https://www.example.org,Production,0,No,,Timeout,Medium,No,No,None,Warning,INC-20260716-001,Second failed check; monitoring continues
+2026-07-16 09:15:00,Public Website,https://www.example.org,Production,0,No,,Timeout,High,Yes,Yes,Email,Major Outage,INC-20260716-001,Major outage threshold met
+2026-07-16 09:20:00,Public Website,https://www.example.org,Production,200,Yes,510,None,Informational,No,No,None,Recovered,INC-20260716-001,Website recovered
+2026-07-16 09:25:00,Public Website,https://www.example.org,Production,200,Yes,455,None,Informational,No,No,None,Healthy,,Successful check
