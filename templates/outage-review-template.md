@@ -1,25 +1,27 @@
 # Outage / Monitoring Review Template
 
+> Generic reference template only. Use synthetic examples in public copies and keep production thresholds, targets, owners, incident details and operational statistics out of this repository.
+
 ## Review Period
 
 | Field | Value |
 |---|---|
-| Month | `<Month Year>` |
-| Reviewed by | `<Name / Role>` |
+| Period | `<Month / Date Range>` |
+| Reviewed by | `<Generic Role>` |
 | Review date | `<Date>` |
-| Data source | Microsoft List: Website Monitoring Log |
+| Data source | `<Monitoring Dataset>` |
 
 ## Executive Summary
 
 ```text
-During the review period, the website monitoring workflow completed <Total Checks> checks.
+During the review period, the monitoring workflow completed <Total Checks> checks.
 
-Overall availability was <Availability %>. There were <Failed Checks> failed checks and <Major Outage Count> major outage event(s). <Alert Count> alert(s) were sent.
+Overall availability was <Availability %>. There were <Failed Checks> failed checks and <Outage Count> grouped outage event(s). <Alert Count> notification(s) were generated.
 
-The most significant issue occurred on <Date>, lasting approximately <Duration>. Alerting behaviour was assessed as <Effective / Needs Tuning>.
+The most significant synthetic/example issue lasted approximately <Duration>. Alerting behaviour was assessed as <Effective / Needs Tuning> against the configured reference threshold.
 ```
 
-## Monthly Metrics
+## Review Metrics
 
 | Metric | Value |
 |---|---:|
@@ -27,8 +29,8 @@ The most significant issue occurred on <Date>, lasting approximately <Duration>.
 | Successful checks |  |
 | Failed checks |  |
 | Availability % |  |
-| Estimated downtime minutes |  |
-| Major outage count |  |
+| Calculated downtime |  |
+| Outage count |  |
 | Intermittent failure count |  |
 | Alerts sent |  |
 | Suppressed transient failures |  |
@@ -40,48 +42,53 @@ The most significant issue occurred on <Date>, lasting approximately <Duration>.
 
 | Incident ID | Start Time | Recovery Time | Duration | Severity | Alert Sent | Notes |
 |---|---|---|---:|---|---|---|
-|  |  |  |  |  |  |  |
+| `<SYNTHETIC-ID>` |  |  |  |  |  |  |
 
 ## Alert Quality Review
 
 | Question | Assessment |
 |---|---|
-| Were alerts sent only for material issues? |  |
+| Were notifications generated only for material conditions? |  |
 | Were there duplicate alerts? |  |
 | Were there missed alerts? |  |
 | Were transient failures correctly suppressed? |  |
-| Should the 15-minute threshold be adjusted? |  |
-| Should Teams alerting be added or changed? |  |
+| Does the configured threshold remain appropriate for the reference scenario? |  |
+| Are the selected notification channels appropriate? |  |
 
 ## Root Cause / Follow-Up Notes
 
 ```text
-Document any known causes, such as hosting issue, DNS issue, certificate issue, network issue, application issue, planned maintenance, or false positive.
+Use synthetic or generic categories in public examples, such as hosting issue, DNS issue, certificate issue, network issue, application issue, maintenance, or false positive.
 ```
 
 ## Improvement Actions
 
-| Action | Owner | Due Date | Status |
+| Action | Owner Role | Due Date | Status |
 |---|---|---|---|
 |  |  |  |  |
 
 ## Threshold Review
 
-| Current Threshold | Recommended Change | Rationale |
-|---|---|---|
-| 5-minute monitoring interval |  |  |
-| 15-minute major outage alert threshold |  |  |
+| Configurable Parameter | Current Example | Recommended Change | Rationale |
+|---|---|---|---|
+| Monitoring interval | `<Example>` |  |  |
+| Alert threshold | `<Example>` |  |  |
+| Recovery confirmation | `<Example>` |  |  |
 
 ## Dashboard Notes
 
 ```text
-Record whether Power BI visuals were accurate, whether data quality issues were observed, and whether additional metrics are needed for management reporting.
+Record whether the reference visuals were accurate, whether synthetic data-quality issues were observed, and whether additional metrics would improve the generic design.
 ```
 
-## Approval / Closure
+## Closure
 
-| Role | Name | Date |
+| Role | Name / Placeholder | Date |
 |---|---|---|
 | Reviewer |  |  |
-| Service owner |  |  |
-| IT owner |  |  |
+| Service owner role |  |  |
+| Technical owner role |  |  |
+
+## Public Portfolio Boundary
+
+Never populate a public copy with real employer/client domains, internal thresholds, SLA/SLO values, actual outage dates/statistics, production incident IDs, staff names, recipient lists, confidential root-cause details, or operational screenshots.
