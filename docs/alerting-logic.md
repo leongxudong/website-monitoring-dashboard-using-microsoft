@@ -2,164 +2,133 @@
 
 ## Purpose
 
-The alerting logic is designed to detect meaningful website availability issues while reducing unnecessary notification noise.
+This document describes generic alerting patterns for website availability monitoring. It is a portfolio/reference design only and does not represent any employer's production threshold, internal monitoring standard, escalation path, SLA or SLO.
 
-The first version of the workflow sent too many email alerts when the website was down for an extended period or when failures occurred intermittently. The revised logic introduces delay, thresholding, and severity classification so that alerts are more actionable.
+## Illustrative Monitoring Parameters
 
-## Monitoring Interval
-
-| Parameter | Value |
+| Parameter | Example value |
 |---|---|
-| Query interval | Every 5 minutes |
+| Query interval | 5 minutes |
 | Primary check | Website availability query |
 | Logging | Every query result is stored |
-| Major outage threshold | Approximately 15 minutes |
+| Major alert threshold | 3 consecutive failures / approximately 15 minutes |
 
-With a 5-minute interval, a 15-minute threshold generally requires multiple failed checks before a major outage alert is sent.
+These values are chosen only to make the control logic easy to understand. Actual monitoring thresholds should be selected from service criticality, recovery objectives, false-positive tolerance, cost, and operational response capability.
 
-## Basic Status Classification
+## Generic Status Classification
 
-| Status | Meaning | Alert Behaviour |
+| Status | Meaning | Alert behaviour |
 |---|---|---|
-| Healthy | Website responds successfully | No alert |
-| Transient Failure | One failed check | Log only, no immediate major alert |
-| Sustained Failure | Repeated failures across the alert threshold | Send major outage alert |
-| Intermittent Failure | Repeated fail/recover pattern within a period | Planned enhancement |
-| Recovery | Website returns to healthy state after alert | Planned recovery notification |
+| Healthy | Endpoint responds successfully | No alert |
+| Transient failure | Isolated failed check | Log only |
+| Sustained failure | Repeated failures across configured threshold | Send outage alert |
+| Intermittent failure | Repeated fail/recover pattern | Optional rolling-window alert |
+| Recovery | Service returns after an active outage | Send recovery notification |
 
-## Severity Model
+## Generic Severity Model
 
-| Severity | Example Condition | Notification Approach |
+| Severity | Example condition | Notification approach |
 |---|---|---|
-| Informational | Successful check, routine log | Store in Microsoft List only |
-| Low | Single failed check | Store in Microsoft List only |
-| Medium | Repeated failures below major threshold | Store, monitor next run |
-| High | Sustained failure for approximately 15 minutes | Send major outage alert |
-| Critical | Sustained outage affecting high-sensitivity or critical service | Escalate through priority channel |
+| Informational | Successful routine check | Store only |
+| Low | Single failed check | Store only |
+| Medium | Repeated failures below escalation threshold | Continue monitoring |
+| High | Configured outage threshold met | Send priority notification |
+| Critical | High-impact or critical-service outage | Use organisation-approved escalation process |
 
-## Sensitivity Model
-
-Not all websites or endpoints should be treated equally. Alert routing can be adjusted based on service sensitivity.
-
-| Sensitivity | Description | Example Alert Behaviour |
-|---|---|---|
-| Public informational | Public website or information page | Alert after sustained outage |
-| Business important | Website supports stakeholder communication or operational dependency | Shorter escalation window may be appropriate |
-| Critical service | Website supports critical service access or regulated process | Higher-priority alerting and management visibility |
-
-## Current Major Outage Logic
-
-Current logic can be represented as:
+## Reference Alert Logic
 
 ```text
-IF website_check = failed
-AND failure_duration >= 15 minutes
-AND major_outage_alert_not_already_sent
-THEN send major outage alert
+IF latest_check = failed
+AND configured_failure_threshold_met = true
+AND active_outage_alert = false
+THEN send outage alert
 ELSE log result only
 ```
 
-## Suggested Future State Logic
-
-A more mature version should track alert state so that the flow does not repeatedly alert for the same outage.
+A more mature flow can track state:
 
 ```text
 For each scheduled check:
 
-1. Run website query.
-2. Create monitoring log item.
-3. If result is healthy:
+1. Run endpoint query.
+2. Record monitoring result.
+3. If healthy:
    - Reset consecutive failure count.
-   - If prior alert state was Outage, send recovery notification.
-   - Mark alert state as Healthy.
-4. If result is failed:
+   - If an outage was active, send recovery notification.
+   - Mark state Healthy.
+4. If failed:
    - Increment consecutive failure count.
-   - Calculate failure duration.
-   - If failure duration is below threshold, suppress alert.
-   - If failure duration meets threshold and no active outage alert exists, send major outage alert.
-   - If active outage alert already exists, suppress duplicate alert.
+   - Track first failed timestamp.
+   - Suppress alert until configured threshold is met.
+   - Once threshold is met, alert only if no active outage notification exists.
+   - Suppress duplicate alerts while the same outage remains active.
 ```
 
-## Alert Noise Controls
+## Noise-Reduction Controls
 
 | Control | Purpose |
 |---|---|
-| Consecutive failure count | Prevent alerting on one-off failed checks |
-| Alert suppression window | Prevent repeated alerts during the same outage |
-| Alert state field | Track whether an outage has already been notified |
-| Recovery notification | Close the loop when service returns to normal |
-| Severity routing | Notify different audiences depending on impact |
+| Consecutive failure count | Reduce one-off false alerts |
+| Alert-state field | Track whether an outage is already active |
+| Suppression window | Prevent repeated alerts for the same condition |
+| Recovery notification | Close the incident loop |
+| Service classification | Allow different thresholds for different service classes |
 
-## Example Alert State Machine
+## Reference State Machine
 
 ```mermaid
 stateDiagram-v2
     [*] --> Healthy
     Healthy --> Warning: First failed check
     Warning --> Healthy: Next check succeeds
-    Warning --> MajorOutage: Failure continues >= threshold
-    MajorOutage --> MajorOutage: Failure continues, suppress duplicate alert
-    MajorOutage --> Recovered: Website check succeeds
-    Recovered --> Healthy: Recovery logged
+    Warning --> Outage: Configured threshold met
+    Outage --> Outage: Failure continues, suppress duplicate alert
+    Outage --> Recovered: Check succeeds
+    Recovered --> Healthy: Recovery recorded
 ```
 
-## Email Alert Example
-
-Subject:
+## Generic Email Example
 
 ```text
-[Major Outage] Public Website Availability Alert
-```
+Subject: [Availability Alert] Public Endpoint
 
-Body:
+The monitoring workflow detected a sustained availability issue.
 
-```text
-The website monitoring workflow has detected a sustained availability issue.
-
-Website: <Target Name>
-URL: <Target URL>
-Severity: High
+Target: <Generic Target Name>
+URL: <Example URL>
+State: Outage
 First Failed Check: <Timestamp>
 Latest Failed Check: <Timestamp>
 Duration: <Duration>
-HTTP Status / Error: <Status or Error>
+HTTP Status / Error Category: <Sanitized value>
 
-This alert was triggered after the configured major outage threshold was reached.
+This notification was triggered after the configured alert threshold was met.
 ```
 
-## Teams Alert Example
-
-Planned Teams message format:
+## Generic Teams Example
 
 ```text
-🚨 Website Monitoring Alert
+Website Monitoring Alert
 
-Status: Major Outage
-Website: <Target Name>
+Status: Outage
+Target: <Generic Target Name>
 Detected Since: <Timestamp>
 Duration: <Duration>
-Latest Status: <HTTP Status / Error>
+Latest Status: <Sanitized status/error>
 
-Action: Please validate website availability and begin incident triage if confirmed.
+Action: Validate availability and begin triage if confirmed.
 ```
 
-## Monthly Review Questions
+## Review Questions
 
-- How many failed checks occurred this month?
+- How many failed checks occurred?
 - How many alerts were sent?
 - How many failures were suppressed as transient?
-- How many major outages occurred?
-- How long was the longest outage?
-- Were any alerts false positives?
+- How many distinct outage events occurred?
+- Were there false positives?
 - Should thresholds be adjusted?
-- Were recovery notifications accurate?
+- Did recovery notifications work correctly?
 
-## Improvement Backlog
+## Public Portfolio Boundary
 
-- Track consecutive failed checks.
-- Track active outage state.
-- Add recovery notification.
-- Add intermittent failure detection.
-- Add configurable thresholds by website sensitivity.
-- Add Teams notification and escalation channel.
-- Add monthly alert quality review.
+Keep all examples synthetic. Do not include production URLs, internal thresholds, recipient lists, Teams channels, SLA/SLO values, escalation paths, screenshots, or incident details.
