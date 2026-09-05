@@ -2,113 +2,117 @@
 
 ## Objective
 
-The objective is to provide a lightweight monitoring workflow for website availability using Microsoft 365 and Power Platform components already available in many organizations.
+This document describes a generic low-code reference architecture for public website availability monitoring using Microsoft 365 and Power Platform components.
 
-The solution is not intended to replace an enterprise observability platform. It is intended to provide a practical, low-code monitoring baseline for public website availability, alerting, and monthly service reporting.
+It is not production documentation and does not represent any employer/client environment, internal monitoring standard, operational threshold, SLA/SLO, target system, or escalation process.
 
-## Current Architecture
+## Reference Architecture
 
 ```mermaid
 flowchart TD
-    A[Scheduled trigger: every 5 minutes] --> B[Power Automate cloud flow]
-    B --> C[HTTP request to monitored website]
+    A[Configurable scheduled trigger] --> B[Power Automate cloud flow]
+    B --> C[HTTP request to example endpoint]
     C --> D[Parse response]
     D --> E[Create item in Microsoft List]
-    D --> F[Evaluate alert rules]
+    D --> F[Evaluate configurable alert rules]
     F -->|Healthy| G[No alert]
     F -->|Transient issue| H[Suppress immediate alert]
-    F -->|Sustained failure >= 15 minutes| I[Send major outage email]
-    I --> J[IT / service owner notification]
+    F -->|Threshold met| I[Send outage notification]
+    I --> J[Generic responder / service owner]
     E --> K[Microsoft List monitoring log]
     K --> L[Power BI reporting dataset]
-    L --> M[Monthly performance review]
+    L --> M[Service performance review]
 ```
 
 ## Component Responsibilities
 
 | Component | Responsibility |
 |---|---|
-| Power Automate scheduled trigger | Runs the monitoring workflow every 5 minutes |
-| HTTP query action | Sends a request to the monitored website |
-| Condition / control logic | Classifies the response as success, transient failure, intermittent issue, or major outage |
-| Microsoft List | Stores every monitoring result as a structured log item |
-| Outlook email | Sends major outage alerts after the threshold is reached |
-| Microsoft Teams | Planned channel-based alerting and operational visibility |
-| Power BI | Planned trend dashboard for uptime and monthly review |
+| Power Automate scheduled trigger | Runs the workflow at a configurable interval |
+| HTTP query action | Sends a request to a public example endpoint |
+| Condition/control logic | Classifies responses and evaluates configured thresholds |
+| Microsoft List | Stores monitoring results as structured records |
+| Outlook / Teams | Optional notification channels |
+| Power BI | Optional trend and service-performance reporting |
 
-## Monitoring Flow
+## Generic Monitoring Flow
 
-1. The scheduled cloud flow runs every 5 minutes.
-2. The flow sends a website query to the configured URL.
-3. The response is evaluated based on availability indicators, such as HTTP status, timeout, or connection failure.
-4. A log item is created in Microsoft Lists for each query.
-5. The alerting logic checks whether the issue is transient or sustained.
-6. If the sustained outage threshold is reached, an alert is sent.
-7. Log data is later used for Power BI reporting and monthly review.
+1. The scheduled flow runs at a configured interval.
+2. The flow queries the configured public endpoint.
+3. The response is evaluated using availability indicators such as HTTP status, timeout, or connection failure.
+4. A sanitized log record is written for each check.
+5. Alerting logic distinguishes isolated from sustained failures.
+6. When the configured condition is met, a notification is sent.
+7. Historical records can be used for reliability reporting and trend analysis.
 
-## Current Alert Tuning
+## Illustrative Threshold Example
 
-The original implementation generated too many email alerts during prolonged or intermittent downtime. To reduce alert fatigue, the workflow was tuned so that a major outage alert is sent after approximately 15 minutes of sustained or repeated failure.
+For demonstration, a lab might check every 5 minutes and alert after three consecutive failures. This is only an example to make the state logic concrete.
 
-With a 5-minute monitoring interval, a 15-minute threshold generally means the workflow waits for multiple failed checks before escalating.
+Production thresholds should instead be chosen from factors such as:
+
+- service criticality;
+- recovery objectives;
+- false-positive tolerance;
+- response capacity;
+- platform/cost constraints; and
+- approved organisational policy.
 
 ## Logical Layers
 
-| Layer | Description | Example Output |
+| Layer | Description | Example output |
 |---|---|---|
-| Collection | Query website and capture result | HTTP status, timestamp, response time |
-| Storage | Store each query result | Microsoft List item |
-| Evaluation | Determine severity and alert requirement | Healthy, degraded, major outage |
-| Notification | Notify relevant parties | Email, future Teams alert |
-| Reporting | Show trends and service performance | Power BI dashboard |
+| Collection | Query endpoint and capture result | HTTP status, timestamp, response time |
+| Storage | Persist each query result | Microsoft List record |
+| Evaluation | Determine status and alert requirement | Healthy, degraded, outage |
+| Notification | Notify configured recipients | Email or Teams |
+| Reporting | Show trends and service performance | Power BI visuals |
 
 ## Design Rationale
 
 ### Why Power Automate
 
-Power Automate is suitable for this use case because the workflow is simple, scheduled, and integration-focused. It can connect scheduled triggers, HTTP requests, Microsoft Lists, email notifications, and Teams notifications with minimal custom code.
+Power Automate is suitable for a lightweight integration-oriented workflow because it can connect scheduled triggers, HTTP requests, Microsoft Lists and notifications without requiring a dedicated monitoring service.
 
 ### Why Microsoft Lists
 
-Microsoft Lists provides a simple structured log store that is easy to review, filter, and export. It is also suitable as a source for Power BI reporting.
+Microsoft Lists provides a simple structured store that can be reviewed, filtered and used as a source for reporting in small-scale scenarios.
 
-### Why alert suppression is needed
+### Why alert suppression matters
 
-Alerting on every failed query creates unnecessary noise. A monitoring tool should help responders focus on material incidents, not flood them with duplicate notifications.
+Alerting on every failed query creates noise. Consecutive-failure logic and active-outage state can make notifications more actionable.
 
-## Current Limitations
+## Limitations
 
-- The current version focuses on availability, not full user journey monitoring.
-- The workflow may not distinguish all causes of failure without additional checks.
-- Power Automate timing may not be as precise as a dedicated monitoring platform.
-- Microsoft Lists is suitable for lightweight logging but may not be ideal for high-volume telemetry.
-- Email alerts can still create noise if alert state and recovery logic are not carefully handled.
+- This is availability checking, not full observability or synthetic user-journey monitoring.
+- Power Automate timing is not as precise as a dedicated monitoring platform.
+- Microsoft Lists is suitable only for lightweight telemetry volumes.
+- Root-cause identification requires additional evidence beyond a failed HTTP query.
+- Notification state and recovery logic need careful testing to avoid noise or missed alerts.
 
-## Future Architecture
+## Possible Extensions
 
 ```mermaid
 flowchart TD
-    A[Scheduled trigger] --> B[Website availability check]
-    B --> C[HTTP status check]
-    B --> D[Response time check]
-    B --> E[Keyword / content check]
-    B --> F[SSL certificate expiry check]
-    C --> G[Microsoft List log]
+    A[Scheduled trigger] --> B[Availability check]
+    B --> C[HTTP status]
+    B --> D[Response time]
+    B --> E[Keyword/content check]
+    B --> F[TLS certificate expiry check]
+    C --> G[Monitoring log]
     D --> G
     E --> G
     F --> G
-    G --> H[Power BI dashboard]
-    G --> I[Alert state table]
-    I --> J[Teams alert]
-    I --> K[Email alert]
+    G --> H[Power BI]
+    G --> I[Alert state]
+    I --> J[Teams]
+    I --> K[Email]
     I --> L[Recovery notification]
 ```
 
-## Security and Governance Considerations
+## Public Portfolio Boundary
 
-- Do not store credentials in plain text.
-- Avoid logging sensitive response content.
-- Use least privilege for connectors and flow owners.
-- Maintain clear ownership for the flow, Microsoft List, alert recipients, and dashboard.
-- Periodically review alert thresholds and false positives.
-- Sanitize logs before using them in public portfolio documentation.
+- Use `example.com` or other synthetic targets.
+- Do not store credentials in source or screenshots.
+- Do not publish employer/client names, production URLs, internal thresholds, recipient lists, SLA/SLO values, tenant IDs, flow IDs, operational screenshots, logs, or incident details.
+- Treat every numerical threshold in this repository as illustrative unless explicitly stated otherwise.
