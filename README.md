@@ -1,136 +1,119 @@
 # Website Monitoring Dashboard Using Microsoft 365
 
-A lightweight website monitoring and alerting workflow built using Microsoft Power Automate, Microsoft Lists, Outlook / Teams notifications, and Power BI reporting.
+A generic reference project for building lightweight website availability monitoring with Microsoft Power Automate, Microsoft Lists, Outlook or Teams notifications, and Power BI reporting.
 
-This project documents a practical low-code approach for monitoring the availability of a public website, recording each check into a Microsoft List, reducing alert noise through outage detection logic, and preparing the dataset for monthly service performance reporting.
+> **Public portfolio boundary:** this repository is a generic design example. It does not document any employer's production environment, internal monitoring standard, target system, operational threshold, tenant configuration, or confidential process.
 
-## Project Summary
+## Problem
 
-The monitoring workflow performs scheduled website availability checks at a defined interval. Each query result is written into a Microsoft List for traceability and trend analysis. Alerting logic is applied so that short transient failures do not immediately trigger excessive email notifications.
+Simple website monitoring becomes noisy when every failed request generates an alert. This reference design separates:
 
-The current implementation uses:
+1. **Monitoring** — query a public endpoint at a configurable interval.
+2. **Evidence** — log successful and failed checks for later analysis.
+3. **Alerting** — notify only when a configurable failure condition is met.
+4. **Reporting** — prepare the resulting dataset for service-performance review.
 
-- **Power Automate** for scheduled monitoring and alert workflow logic
-- **HTTP request / website query** to test website availability
-- **Microsoft Lists** as the monitoring log store
-- **Outlook email alerts** for outage notification
-- **Microsoft Teams alerts** as a planned enhancement
-- **Power BI** as a planned reporting layer for monthly performance review
-
-## Current Monitoring Scenario
-
-| Item | Current Approach |
-|---|---|
-| Monitored asset | Public corporate website, for example `awwa.org.sg` |
-| Monitoring interval | Every 5 minutes |
-| Rationale for interval | Aligned to internal uptime monitoring guideline |
-| Log retention approach | Every query result is stored in Microsoft Lists |
-| Initial alert problem | Repeated emails during prolonged or intermittent downtime |
-| Current tuning | Major outage alert fires only after approximately 15 minutes of sustained or repeated failure |
-| Next enhancement | Teams alerting, richer website checks, Power BI dashboarding |
-
-## Why This Was Built
-
-Basic website monitoring can quickly become noisy if every failed check sends an alert. During extended downtime or intermittent failures, a simple rule such as `if website down, send email` can flood the mailbox and make alerts less actionable.
-
-This project therefore focuses on three practical objectives:
-
-1. **Availability visibility** — confirm whether the website is reachable at regular intervals.
-2. **Evidence and logging** — retain each monitoring result for later review.
-3. **Alert quality** — reduce alert fatigue by distinguishing short transient failures from sustained outages.
-
-## High-Level Architecture
+## Reference Architecture
 
 ```mermaid
 flowchart LR
     A[Power Automate Scheduled Flow] --> B[HTTP Website Query]
     B --> C[Evaluate Response]
-    C --> D[Write Result to Microsoft List]
+    C --> D[Write Sanitized Result to Microsoft List]
     C --> E{Alert Rule Evaluation}
     E -->|Transient failure| F[Suppress / Wait for next check]
-    E -->|Sustained outage threshold met| G[Send Email Alert]
+    E -->|Threshold met| G[Send Notification]
     E -->|Future enhancement| H[Post Teams Alert]
     D --> I[Power BI Dataset / Report]
-    I --> J[Monthly Performance Review]
+    I --> J[Service Performance Review]
 ```
+
+## Illustrative Configuration
+
+The values below are examples for demonstrating workflow logic only. They are not intended to represent a production configuration or internal standard.
+
+| Item | Illustrative value |
+|---|---|
+| Monitored asset | `https://example.com` |
+| Query interval | 5 minutes |
+| Major alert threshold | 3 consecutive failures / approximately 15 minutes |
+| Log retention | Every query result recorded |
+| Notification | Email; Teams optional |
+| Reporting | Power BI optional |
+
+Actual thresholds should be selected from service criticality, recovery objectives, false-positive tolerance, platform limits, cost, and operational response capability.
 
 ## Repository Structure
 
 | Path | Purpose |
 |---|---|
-| [`docs/architecture.md`](docs/architecture.md) | System architecture and data flow |
-| [`docs/alerting-logic.md`](docs/alerting-logic.md) | Alert thresholds, suppression logic, severity model, and tuning rationale |
-| [`docs/data-model.md`](docs/data-model.md) | Suggested Microsoft List schema for monitoring logs |
-| [`docs/dashboard-plan.md`](docs/dashboard-plan.md) | Power BI reporting plan and suggested metrics |
-| [`docs/implementation-notes.md`](docs/implementation-notes.md) | Implementation considerations, limitations, and operational notes |
-| [`docs/official-microsoft-references.md`](docs/official-microsoft-references.md) | Microsoft Learn references and official screenshot links |
-| [`sample-data/website-monitoring-log-sample.csv`](sample-data/website-monitoring-log-sample.csv) | Sanitized sample monitoring dataset |
-| [`templates/outage-review-template.md`](templates/outage-review-template.md) | Post-outage / monthly review template |
+| [`docs/architecture.md`](docs/architecture.md) | Generic architecture and data flow |
+| [`docs/alerting-logic.md`](docs/alerting-logic.md) | Illustrative thresholding, suppression and severity logic |
+| [`docs/data-model.md`](docs/data-model.md) | Suggested Microsoft List schema |
+| [`docs/dashboard-plan.md`](docs/dashboard-plan.md) | Example Power BI metrics and visuals |
+| [`docs/implementation-notes.md`](docs/implementation-notes.md) | Generic implementation considerations |
+| [`docs/official-microsoft-references.md`](docs/official-microsoft-references.md) | Microsoft Learn references |
+| [`sample-data/website-monitoring-log-sample.csv`](sample-data/website-monitoring-log-sample.csv) | Synthetic sample monitoring data |
+| [`templates/outage-review-template.md`](templates/outage-review-template.md) | Generic outage-review template |
 
-## Key Design Principles
+## Design Principles
 
-### 1. Monitor at a meaningful interval
+### Log both success and failure
 
-The website is checked every 5 minutes because this aligns to the uptime guideline used for this monitoring case. This interval is frequent enough to detect availability issues but not so frequent that it becomes unnecessarily noisy for a low-code workflow.
+Uptime and reliability analysis require evidence of successful checks as well as failures. A monitoring log should therefore record each scheduled result consistently.
 
-### 2. Log every query result
+### Suppress transient noise
 
-Each check is stored in Microsoft Lists. This provides a basic evidence trail for:
+A single timeout does not necessarily justify an incident. Consecutive-failure counters, suppression state, and recovery notifications can reduce duplicate or low-value alerts.
 
-- Availability trend analysis
-- Outage duration review
-- Alert validation
-- Monthly performance reporting
-- Future Power BI dashboarding
+### Separate state from history
 
-### 3. Avoid alert fatigue
+A compact state record can track the current incident, consecutive failures, and whether an alert has already been sent. The historical log can then remain append-only for analysis.
 
-The workflow was tuned so that every single failure does not immediately generate an alert. A sustained outage threshold of approximately 15 minutes is used before major outage notification.
+### Keep alert thresholds configurable
 
-This helps distinguish:
+Different services justify different detection and escalation thresholds. Avoid hard-coding one threshold as universally appropriate.
 
-- Short transient failures
-- Intermittent degradation
-- Sustained major outage
+## Example Capability Status
 
-### 4. Separate monitoring, alerting, and reporting
+This repository documents a reference pattern rather than a production deployment.
 
-The design separates three concerns:
-
-| Layer | Purpose |
+| Capability | Reference coverage |
 |---|---|
-| Monitoring | Query website and record result |
-| Alerting | Decide whether the failure pattern requires notification |
-| Reporting | Show uptime, outage count, response trends, and month-on-month performance |
+| Scheduled HTTP query | Documented |
+| Microsoft List logging | Documented |
+| Failure thresholding | Documented |
+| Duplicate-alert suppression | Documented |
+| Recovery notification | Design example |
+| Teams alerting | Design example |
+| Power BI reporting | Design example |
+| SSL expiry/content checks | Possible extension |
 
-## Current Status
+## Extensions
 
-| Capability | Status |
-|---|---|
-| Scheduled website query | Implemented |
-| 5-minute monitoring interval | Implemented |
-| Microsoft List logging | Implemented |
-| Email alerting | Implemented |
-| Major outage threshold tuning | Implemented |
-| Teams alerting | Planned |
-| Additional website checks | Planned |
-| Power BI dashboard | Planned |
-| Monthly service performance reporting | Planned |
+- Response-time monitoring
+- TLS certificate expiry checks
+- Keyword/content validation
+- Rolling-window failure detection
+- Configurable severity by service class
+- Recovery notifications
+- Monthly uptime and outage trend reporting
+- Incident acknowledgement and review fields
 
-## Planned Enhancements
+## Public-Repository Rules
 
-- Add Teams channel notifications for major incidents.
-- Add severity-based routing for different websites or services.
-- Track response time, not only up/down status.
-- Add SSL certificate expiry monitoring.
-- Add keyword/content check to confirm the correct page is served.
-- Add intermittent outage detection, such as repeated failures within a rolling window.
-- Export Microsoft List data to Power BI for monthly trending.
-- Build monthly uptime, downtime, outage count, and mean time to recovery visuals.
-- Add alert acknowledgement and incident review fields.
+Do not place production details in this repository. In particular, exclude:
+
+- employer or client names and domains;
+- tenant, subscription, flow or connector identifiers;
+- mailbox, Teams channel or service-account names;
+- production screenshots or monitoring logs;
+- internal SLA/SLO/uptime standards;
+- credentials, secrets, tokens or API keys;
+- internal routing, escalation paths or incident details.
+
+Use synthetic examples such as `example.com`, generic field names, and invented sample data instead.
 
 ## Disclaimer
 
-This repository is a sanitized portfolio documentation project. It does not include internal credentials, tenant identifiers, flow IDs, mailbox addresses, production screenshots, security-sensitive configuration, or confidential organizational information.
-
-Screenshots referenced in this repository are externally linked from official Microsoft Learn pages where included. They are provided as product-reference visuals only and should be replaced with sanitized implementation screenshots if this repository is used for internal documentation.
+This repository is a personal learning and portfolio reference. It is not production documentation and does not represent the configuration, policy, or monitoring standard of any employer or client.
