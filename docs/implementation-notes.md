@@ -1,172 +1,126 @@
 # Implementation Notes
 
-## Current Implementation
+## Scope
 
-The current implementation uses Power Automate to run a scheduled monitoring workflow. The workflow queries the target website every 5 minutes and records each result into a Microsoft List.
+These notes describe a **generic reference implementation** for website availability monitoring with Microsoft Power Automate and Microsoft Lists. They are intentionally detached from any production environment, employer, client, internal standard, or confidential operating process.
 
-Email alerting is configured for major outages. The alert logic was tuned after the first version generated excessive emails during extended downtime or intermittent failures.
-
-## Current Workflow Summary
+## Reference Workflow
 
 ```text
-Scheduled trigger every 5 minutes
-    -> Query website
+Scheduled trigger
+    -> Query example public endpoint
     -> Evaluate response
     -> Create monitoring log item in Microsoft List
-    -> Check alert threshold
-    -> Send email if major outage threshold is met
+    -> Check configurable alert threshold
+    -> Send notification if threshold is met
 ```
 
-## Existing Operational Decision
-
-The workflow uses a 5-minute query interval because the monitoring case is aligned to a 5-minute uptime guideline.
-
-However, alerts are not sent immediately after one failed check. A major outage alert is generated only after approximately 15 minutes of sustained or repeated failure. This reduces alert fatigue and makes alerts more meaningful.
+An illustrative example might use a 5-minute query interval and alert after three consecutive failed checks. Those values are demonstration settings only; real thresholds should be selected from service criticality, recovery objectives, false-positive tolerance, cost, and response capability.
 
 ## Recommended Power Automate Structure
 
 ### Trigger
 
-Use a scheduled cloud flow recurrence trigger.
-
-Recommended settings:
-
-| Setting | Value |
-|---|---|
-| Frequency | Minute |
-| Interval | 5 |
-| Time zone | Set explicitly based on operational reporting requirement |
+Use a scheduled cloud-flow recurrence trigger and set the time zone explicitly.
 
 ### Website Query
 
-Use an HTTP action or equivalent connector/action to perform a website availability query.
+Use an HTTP action or equivalent connector to perform an availability query against a non-sensitive target.
 
-Capture where possible:
+Capture where appropriate:
 
-- Status code
-- Response time
-- Error message
-- Timeout result
-- Timestamp
+- status code;
+- response time;
+- sanitized error category;
+- timeout result; and
+- timestamp.
 
 ### Logging
 
-Use the SharePoint / Microsoft Lists `Create item` action to store the result.
-
-Each run should create a log item even if the website is healthy. This is important because uptime reporting requires successful checks as well as failed checks.
+Use Microsoft Lists or another approved data store to record each run. Logging both healthy and failed checks enables availability calculations and helps distinguish outages from isolated failures.
 
 ### Alert Evaluation
 
-Use condition logic to decide whether to send an alert.
-
-Recommended control points:
+Useful control points include:
 
 - Is the latest check successful?
 - How many consecutive failures have occurred?
 - When did the current failure window begin?
 - Has an alert already been sent for this outage?
-- Should the alert be suppressed?
-- Has the website recovered?
+- Should duplicate alerts be suppressed?
+- Has the service recovered?
 
 ## Common Problems and Mitigations
 
-| Problem | Cause | Mitigation |
+| Problem | Cause | Generic mitigation |
 |---|---|---|
-| Too many email alerts | Alert sent on every failed query | Add alert state and suppression logic |
-| False outage alerts | One-off timeout or transient network issue | Require repeated failures before major alert |
-| Hard to calculate uptime | Only failed checks are logged | Log every check, including successful checks |
-| Duplicate incident count | Each failed check treated as separate incident | Use an `IncidentId` or failure window grouping |
-| Difficult Power BI reporting | Inconsistent list values | Use choice fields and fixed values |
-| Unclear root cause | Error messages not captured | Store sanitized failure category and error text |
+| Too many alerts | Alert generated on every failed query | Track alert state and suppress duplicates |
+| False outage alerts | One-off timeout or transient issue | Require repeated failures before escalation |
+| Poor uptime calculation | Only failures are logged | Log every check consistently |
+| Duplicate incident count | Each failed check treated as separate incident | Group failures into an incident window |
+| Difficult reporting | Inconsistent field values | Use stable schemas and controlled values |
+| Sensitive error leakage | Raw response content stored | Keep only sanitized diagnostic categories |
 
-## Recommended Alert State Fields
+## Example State Fields
 
-To improve reliability, add the following fields to the Microsoft List or maintain a separate state-tracking list:
+A separate state record can contain:
 
 | Field | Purpose |
 |---|---|
-| AlertState | Healthy, Warning, Major Outage, Recovered |
-| ConsecutiveFailureCount | Determines if failure is transient or sustained |
-| FirstFailedTimestamp | Marks start of current failure window |
-| LastAlertTimestamp | Supports suppression of duplicate alerts |
-| IncidentId | Groups checks that belong to the same outage |
-| RecoveryTimestamp | Supports outage duration calculation |
-
-## Suggested State List
-
-For cleaner alert management, consider using a separate Microsoft List:
-
-```text
-Website Monitoring State
-```
-
-Suggested columns:
-
-| Column | Purpose |
-|---|---|
-| TargetName | Website or endpoint name |
-| TargetUrl | Website URL |
-| CurrentState | Healthy, Warning, Major Outage |
+| TargetName | Generic endpoint label |
+| TargetUrl | Public endpoint URL |
+| CurrentState | Healthy, Warning, Outage |
 | CurrentIncidentId | Active incident reference |
 | FirstFailedTimestamp | Start of current failure window |
-| LastCheckTimestamp | Most recent check time |
-| LastAlertTimestamp | Most recent alert sent time |
+| LastCheckTimestamp | Most recent check |
+| LastAlertTimestamp | Most recent notification |
 | ConsecutiveFailureCount | Current failure streak |
-| ConsecutiveSuccessCount | Current recovery streak |
+| ConsecutiveSuccessCount | Recovery streak |
 
-This avoids repeatedly scanning the full log list to determine current status.
+This keeps current-state evaluation separate from the append-only historical log.
 
-## Power BI Implementation Notes
+## Reporting Considerations
 
-When connecting Power BI to the Microsoft List:
+When connecting Power BI to the monitoring dataset:
 
-- Use the SharePoint Online List connector.
-- Prefer fixed column names and stable choice values.
-- Consider using the 2.0 connector implementation where suitable.
-- Transform timestamp fields carefully.
-- Avoid using free-text fields as slicers.
-- Group failed checks into outage events rather than counting every failed check as one incident.
+- keep field names stable;
+- transform timestamps consistently;
+- use controlled values for status/severity;
+- group failed checks into outage events rather than treating each failure as a separate incident; and
+- avoid exposing sensitive error text or operational identifiers in shared reports.
 
-## Teams Alerting Considerations
+## Notification Considerations
 
-Teams alerting is useful for operational visibility, but it should not simply replicate every email alert.
+Email or Teams notifications should contain only the information needed to validate and respond to the availability issue. Avoid duplicating every failed check across multiple channels.
 
-Recommended Teams use cases:
+A generic alert might include:
 
-- Post major outage notification into an IT operations channel.
-- Post recovery notification into the same thread or channel.
-- Include key fields only: website, status, start time, duration, latest error, action required.
-- Avoid sending every 5-minute failure as a Teams message.
+- endpoint label;
+- current status;
+- first failed timestamp;
+- failure duration;
+- latest sanitized error category; and
+- a generic action such as “validate availability and begin triage if confirmed.”
 
 ## Maintenance Considerations
 
-- Review alert thresholds monthly.
-- Review false positives and suppressed alerts.
-- Confirm the Power Automate flow owner and backup owner.
-- Confirm connector permissions and service account approach.
-- Periodically test alerting logic.
-- Ensure the Microsoft List does not grow without retention planning.
-- Export or archive older logs if volume grows.
+- periodically review thresholds and false positives;
+- verify flow ownership and continuity arrangements;
+- review connector permissions;
+- test alerting and recovery logic;
+- define log-retention limits; and
+- ensure example or portfolio material remains synthetic and non-sensitive.
 
-## Portfolio Documentation Boundaries
+## Public Portfolio Boundary
 
 Do not publish:
 
-- Internal mailbox names
-- Tenant IDs
-- Flow IDs
-- Full production screenshots
-- Internal incident channels
-- Credentials or API keys
-- Detailed system routing
-- Sensitive error response content
+- employer or client names/domains;
+- internal standards or SLA/SLO values;
+- tenant, subscription, flow, connector, mailbox or channel identifiers;
+- credentials, keys, tokens or service-account details;
+- production screenshots or logs;
+- internal escalation paths; or
+- sensitive error/incident data.
 
-Acceptable to publish:
-
-- Sanitized architecture
-- Generic workflow logic
-- Public website monitoring concept
-- Non-sensitive thresholds
-- Example data model
-- Sanitized sample data
-- High-level dashboard plan
+Safe portfolio content should use generic architecture, synthetic data, placeholder endpoints such as `example.com`, and clearly illustrative thresholds.
