@@ -2,26 +2,19 @@
 
 ## Purpose
 
-The planned Power BI dashboard will turn Microsoft List monitoring logs into monthly service performance reporting.
+This document outlines a generic Power BI dashboard for converting website-monitoring logs into service-performance reporting.
 
-The dashboard should help answer:
-
-- Was the website generally available during the month?
-- How many checks failed?
-- Were there sustained outages or only transient failures?
-- How many alerts were sent?
-- Did alert tuning reduce unnecessary noise?
-- Are website response times trending upward?
+It is a reference design only. All targets, thresholds, review periods, metrics and example values should remain synthetic and configurable.
 
 ## Data Source
 
-Primary data source:
+Example source:
 
 ```text
 Microsoft List: Website Monitoring Log
 ```
 
-Planned connection method:
+Example connection method:
 
 ```text
 Power BI / Power Query SharePoint Online List connector
@@ -33,129 +26,101 @@ Power BI / Power Query SharePoint Online List connector
 
 | Visual | Purpose |
 |---|---|
-| Availability % card | Shows overall monthly uptime |
-| Total checks card | Shows monitoring volume |
-| Failed checks card | Shows failure count |
-| Major outage count card | Shows material incidents |
-| Total downtime minutes card | Shows estimated downtime |
-| Alert count card | Shows notification volume |
+| Availability % card | Overall availability for selected period |
+| Total checks card | Monitoring volume |
+| Failed checks card | Failure count |
+| Outage count card | Distinct material incidents |
+| Total downtime card | Estimated or calculated downtime |
+| Alert count card | Notification volume |
 
 ### 2. Availability Trend
 
 | Visual | Purpose |
 |---|---|
-| Daily availability line chart | Shows availability trend by day |
-| Failed checks column chart | Shows concentration of failures |
-| Calendar heatmap | Highlights outage-heavy dates |
+| Availability line chart | Show availability trend over time |
+| Failed checks chart | Show concentration of failures |
+| Calendar heatmap | Highlight periods with more failures |
 
 ### 3. Outage and Alert Review
 
 | Visual | Purpose |
 |---|---|
-| Outage table | Lists major outage events |
-| Alert state breakdown | Shows healthy, warning, major outage, recovered states |
-| Alert channel breakdown | Compares email vs Teams once Teams is added |
-| Suppression count | Shows how many transient failures did not trigger alerts |
+| Outage table | List grouped outage events |
+| Alert-state breakdown | Healthy, warning, outage, recovered |
+| Alert-channel breakdown | Compare configured channels |
+| Suppression count | Show transient failures that did not trigger alerts |
 
 ### 4. Response Performance
 
 | Visual | Purpose |
 |---|---|
-| Average response time trend | Shows website performance over time |
-| Max response time chart | Highlights spikes |
-| Response time distribution | Shows whether performance is stable or variable |
+| Average response-time trend | Show endpoint performance over time |
+| Max response-time chart | Highlight spikes |
+| Response-time distribution | Show stability/variance |
 
-### 5. Data Quality and Operations
+### 5. Data Quality
 
 | Visual | Purpose |
 |---|---|
-| Missing HTTP status count | Identifies incomplete logs |
-| Flow run failures | Tracks monitoring workflow issues |
-| Last successful check | Confirms current monitoring freshness |
+| Missing status count | Identify incomplete records |
+| Workflow failures | Separate monitoring failures from endpoint failures |
+| Last successful check | Confirm monitoring freshness |
 
 ## Suggested Metrics
 
 | Metric | Formula / Logic |
 |---|---|
-| Total Checks | Count of all list items |
+| Total Checks | Count of all monitoring records |
 | Successful Checks | Count where `IsSuccess = Yes` |
 | Failed Checks | Count where `IsSuccess = No` |
 | Availability % | Successful Checks / Total Checks * 100 |
 | Failure Rate % | Failed Checks / Total Checks * 100 |
-| Estimated Downtime Minutes | Failed Checks * 5 |
-| Major Outage Count | Count where `AlertState = Major Outage` |
+| Outage Count | Count of grouped outage events |
 | Alert Count | Count where `AlertSent = Yes` |
 | Average Response Time | Average of `ResponseTimeMs` |
-| Longest Failure Window | Max of grouped outage duration |
+| Longest Failure Window | Maximum grouped outage duration |
+
+Avoid hard-coding a fixed monitoring interval into downtime calculations. Prefer first-failure and recovery timestamps where available.
 
 ## Recommended Filters
 
-- Month
-- Week
-- Day
-- Target website
-- Environment
+- Reporting period
+- Target endpoint
+- Environment/classification
 - Severity
 - Alert state
 - Alert channel
 - Failure category
 
-## Monthly Performance Review Narrative
-
-A monthly reporting summary can use this format:
+## Generic Review Narrative
 
 ```text
-During the reporting month, the website monitoring workflow completed <Total Checks> checks at 5-minute intervals.
+During the selected reporting period, the monitoring workflow completed <Total Checks> checks.
 
-Overall availability was <Availability %>. There were <Failed Checks> failed checks, of which <Major Outage Count> met the major outage threshold. <Alert Count> alert notifications were sent.
+Overall availability was <Availability %>. There were <Failed Checks> failed checks and <Outage Count> grouped outage event(s). <Alert Count> notifications were sent.
 
-The longest detected outage was <Duration>. Most failures were classified as <Failure Category>. Alert tuning helped suppress short transient failures and reduce unnecessary email notifications.
-```
-
-## Suggested Dashboard Layout
-
-```text
-Page 1: Executive Summary
-- Availability %
-- Total checks
-- Failed checks
-- Estimated downtime
-- Major outage count
-- Alert count
-
-Page 2: Availability Trend
-- Availability by day
-- Failed checks by day
-- Outage timeline
-
-Page 3: Alert Quality
-- Alerts sent
-- Suppressed transient failures
-- Alert state distribution
-- False positives, if tagged
-
-Page 4: Response Performance
-- Average response time
-- Max response time
-- Response time trend
+The longest detected outage was <Duration>. Review alerting and suppression behaviour against the configured service requirements before changing thresholds.
 ```
 
 ## Data Preparation Notes
 
-- Convert `CheckTimestamp` to the correct local time zone before reporting.
-- Ensure `IsSuccess` is consistently treated as Boolean.
-- Use fixed choice values for `Severity`, `AlertState`, and `FailureCategory`.
-- Group records by `IncidentId` where available.
-- Avoid treating every failed check as a separate incident.
-- Separate monitoring workflow failures from actual website failures.
+- Convert timestamps consistently before reporting.
+- Treat `IsSuccess` as Boolean.
+- Use controlled values for status/severity fields.
+- Group records by `IncidentId` or outage window where available.
+- Separate monitoring-platform failures from endpoint failures.
+- Use synthetic/public-safe data for portfolio screenshots.
 
-## Future Dashboard Enhancements
+## Possible Enhancements
 
-- Add SLA / uptime target line.
-- Add incident grouping logic.
-- Add month-on-month trend.
-- Add recovery time calculation.
-- Add alert suppression effectiveness metric.
-- Add Teams alert acknowledgement tracking.
-- Add data freshness indicator.
-- Add exportable monthly management summary.
+- Configurable service target/SLO reference line
+- Incident grouping
+- Period-on-period trend
+- Recovery-time calculation
+- Alert-suppression effectiveness
+- Data-freshness indicator
+- Exportable management summary
+
+## Public Portfolio Boundary
+
+Do not include production service targets, real domains, SLA/SLO values, internal severity definitions, actual outage statistics, recipient lists, production screenshots, incident IDs, or operational logs in public dashboard examples.
